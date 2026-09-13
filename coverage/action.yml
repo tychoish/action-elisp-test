@@ -51,4 +51,14 @@ runs:
         INPUT_ARCHIVES: ${{ inputs.archives }}
         INPUT_UNSIGNED_ARCHIVES: ${{ inputs.unsigned-archives }}
       run: |
-        emacs --batch -l "${{ github.action_path }}/../scripts/run-coverage.el"
+        SCRIPT_PATH="${{ github.action_path }}/../scripts/run-coverage.el"
+        if [ ! -f "$SCRIPT_PATH" ]; then
+          SCRIPT_PATH="/__w/${SCRIPT_PATH#/home/runner/work/}"
+        fi
+        if [ ! -f "$SCRIPT_PATH" ] && [ -n "${GITHUB_ACTION_PATH:-}" ]; then
+          SCRIPT_PATH="${GITHUB_ACTION_PATH}/../scripts/run-coverage.el"
+        fi
+        if [ ! -f "$SCRIPT_PATH" ]; then
+          SCRIPT_PATH="${GITHUB_WORKSPACE}/scripts/run-coverage.el"
+        fi
+        emacs --batch -l "$SCRIPT_PATH"

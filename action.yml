@@ -41,4 +41,14 @@ runs:
         INPUT_UNSIGNED_ARCHIVES: ${{ inputs.unsigned-archives }}
         INPUT_RUNNER: ${{ inputs.runner }}
       run: |
-        emacs --batch -l "${{ github.action_path }}/scripts/run-ert.el"
+        SCRIPT_PATH="${{ github.action_path }}/scripts/run-ert.el"
+        if [ ! -f "$SCRIPT_PATH" ]; then
+          SCRIPT_PATH="/__w/${SCRIPT_PATH#/home/runner/work/}"
+        fi
+        if [ ! -f "$SCRIPT_PATH" ] && [ -n "${GITHUB_ACTION_PATH:-}" ]; then
+          SCRIPT_PATH="${GITHUB_ACTION_PATH}/scripts/run-ert.el"
+        fi
+        if [ ! -f "$SCRIPT_PATH" ]; then
+          SCRIPT_PATH="${GITHUB_WORKSPACE}/scripts/run-ert.el"
+        fi
+        emacs --batch -l "$SCRIPT_PATH"

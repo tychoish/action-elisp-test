@@ -46,4 +46,14 @@ runs:
         INPUT_ARCHIVES: ${{ inputs.archives }}
         INPUT_UNSIGNED_ARCHIVES: ${{ inputs.unsigned-archives }}
       run: |
-        emacs --batch -l "${{ github.action_path }}/../scripts/run-lint.el"
+        SCRIPT_PATH="${{ github.action_path }}/../scripts/run-lint.el"
+        if [ ! -f "$SCRIPT_PATH" ]; then
+          SCRIPT_PATH="/__w/${SCRIPT_PATH#/home/runner/work/}"
+        fi
+        if [ ! -f "$SCRIPT_PATH" ] && [ -n "${GITHUB_ACTION_PATH:-}" ]; then
+          SCRIPT_PATH="${GITHUB_ACTION_PATH}/../scripts/run-lint.el"
+        fi
+        if [ ! -f "$SCRIPT_PATH" ]; then
+          SCRIPT_PATH="${GITHUB_WORKSPACE}/scripts/run-lint.el"
+        fi
+        emacs --batch -l "$SCRIPT_PATH"
