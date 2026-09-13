@@ -1,4 +1,4 @@
-;;; bootstrap.el --- Bootstrap package.el and dependencies -*- lexical-binding: t; -*-
+;;; bootstrap.el --- bootstrap.el -*- lexical-binding: t; -*-
 
 (require 'package)
 (require 'seq)
@@ -59,6 +59,16 @@
 (elisp-ci--configure-archives)
 (elisp-ci--setup-load-paths)
 (elisp-ci--install-dependencies)
+
+(defun elisp-ci--find-test-files (&optional pattern-override)
+  "Find test files matching pattern in INPUT_TEST_FILES or PATTERN-OVERRIDE."
+  (let* ((pattern-input (or pattern-override (getenv "INPUT_TEST_FILES") "test/test-*.el"))
+         (patterns (elisp-ci--parse-list pattern-input))
+         (matched nil))
+    (dolist (pat patterns)
+      (let ((files (file-expand-wildcards pat t)))
+        (setq matched (append matched files))))
+    (delete-dups matched)))
 
 (provide 'bootstrap)
 ;;; bootstrap.el ends here

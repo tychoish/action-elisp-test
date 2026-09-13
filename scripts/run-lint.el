@@ -1,8 +1,9 @@
-;;; run-lint.el --- Standardized linter & byte-compilation harness -*- lexical-binding: t; -*-
+;;; run-lint.el --- run-lint.el -*- lexical-binding: t; -*-
 
 (require 'bytecomp)
 (require 'seq)
 (require 'subr-x)
+(require 'bootstrap nil t)
 
 ;; Load bootstrap logic
 (let ((bootstrap-file (expand-file-name "bootstrap.el" (file-name-directory (or load-file-name buffer-file-name)))))

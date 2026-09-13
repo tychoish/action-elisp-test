@@ -1,8 +1,13 @@
-;;; run-coverage.el --- Test coverage measurement harness -*- lexical-binding: t; -*-
+;;; run-coverage.el --- run-coverage.el -*- lexical-binding: t; -*-
 
 (require 'ert)
 (require 'seq)
 (require 'subr-x)
+(require 'bootstrap nil t)
+
+(defvar under-cover-report-format)
+(defvar under-cover-report-file)
+(declare-function under-cover "under-cover")
 
 ;; Load bootstrap logic
 (let ((bootstrap-file (expand-file-name "bootstrap.el" (file-name-directory (or load-file-name buffer-file-name)))))

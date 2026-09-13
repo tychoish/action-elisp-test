@@ -1,23 +1,16 @@
-;;; run-ert.el --- Standardized ERT test runner harness -*- lexical-binding: t; -*-
+;;; run-ert.el --- run-ert.el -*- lexical-binding: t; -*-
 
 (require 'ert)
 (require 'seq)
 (require 'subr-x)
+(require 'bootstrap nil t)
+
+(declare-function elpaish-test-package-batch "elpaish-check")
 
 ;; Load bootstrap logic
 (let ((bootstrap-file (expand-file-name "bootstrap.el" (file-name-directory (or load-file-name buffer-file-name)))))
   (when (file-exists-p bootstrap-file)
     (load-file bootstrap-file)))
-
-(defun elisp-ci--find-test-files ()
-  "Find test files matching pattern in INPUT_TEST_FILES."
-  (let* ((pattern-input (or (getenv "INPUT_TEST_FILES") "test/test-*.el"))
-         (patterns (elisp-ci--parse-list pattern-input))
-         (matched nil))
-    (dolist (pat patterns)
-      (let ((files (file-expand-wildcards pat t)))
-        (setq matched (append matched files))))
-    (delete-dups matched)))
 
 (defun elisp-ci--run-tests ()
   "Load test files and execute ERT test suite."
