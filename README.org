@@ -259,8 +259,8 @@ Coverage workflow uploading LCOV tracefile to Codecov:
 
 The =lint= sub-action supports four integrated analyzers:
 
-1. =byte-compile=: Runs Emacs batch byte-compilation. When =fail-on-warning:
-   true= is set, compiler warnings (unresolved variables, obsolete functions,
+1. =byte-compile=: Runs Emacs batch byte-compilation. When =fail-on-warning: true=
+   is set, compiler warnings (unresolved variables, obsolete functions,
    missing requires) fail the build.
 
 2. =checkdoc=: Validates standard Emacs Lisp docstring style (sentence casing,
