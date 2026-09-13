@@ -1,0 +1,49 @@
+name: "Emacs Lisp Linter"
+description: "Run byte-compilation and checkdoc linting on Emacs Lisp source files."
+author: "sam kleinman <sam@tychoish.com>"
+
+inputs:
+  dependencies:
+    description: "Whitespace or comma-separated list of ELPA packages to install."
+    required: false
+    default: ""
+  target-files:
+    description: "Glob or whitespace-separated list of source files to lint."
+    required: false
+    default: "*.el"
+  load-paths:
+    description: "Whitespace-separated list of directories to add to load-path."
+    required: false
+    default: "."
+  byte-compile:
+    description: "Run byte-compilation with errors on warnings (true/false)."
+    required: false
+    default: "true"
+  checkdoc:
+    description: "Validate docstring conventions (true/false)."
+    required: false
+    default: "true"
+  archives:
+    description: "Package archives to enable."
+    required: false
+    default: "gnu nongnu melpa elpaish"
+  unsigned-archives:
+    description: "Package archives allowed without GPG signatures."
+    required: false
+    default: "elpaish"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Emacs Lisp Linting
+      shell: bash
+      env:
+        INPUT_DEPENDENCIES: ${{ inputs.dependencies }}
+        INPUT_TARGET_FILES: ${{ inputs.target-files }}
+        INPUT_LOAD_PATHS: ${{ inputs.load-paths }}
+        INPUT_BYTE_COMPILE: ${{ inputs.byte-compile }}
+        INPUT_CHECKDOC: ${{ inputs.checkdoc }}
+        INPUT_ARCHIVES: ${{ inputs.archives }}
+        INPUT_UNSIGNED_ARCHIVES: ${{ inputs.unsigned-archives }}
+      run: |
+        emacs --batch -l "${{ github.action_path }}/../scripts/run-lint.el"

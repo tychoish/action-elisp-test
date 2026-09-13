@@ -1,0 +1,101 @@
+#+TITLE: action-elisp-test: Unified GitHub Action for Emacs Lisp CI
+#+AUTHOR: sam kleinman
+#+EMAIL: sam@tychoish.com
+#+LANGUAGE: en
+#+OPTIONS: toc:2 num:nil author:nil email:nil
+
+A streamlined composite GitHub Action to execute ERT test suites, linting, and coverage for Emacs Lisp packages across Emacs versions with zero boilerplate.
+
+* Overview
+:PROPERTIES:
+:CUSTOM_ID: overview
+:END:
+
+=action-elisp-test= eliminates redundant 30-line shell scripts from Emacs package CI workflows by encapsulating:
+- Package archive initialization (GNU ELPA, NonGNU ELPA, MELPA, and ELPAish snapshot).
+- Unsigned archive handling (=package-unsigned-archives=).
+- Automatic external dependency installation via =package.el=.
+- ERT and ELPAish test execution.
+- Dedicated sub-actions for docstring/byte-compilation linting (=./lint=) and code coverage (=./coverage=).
+
+* Usage
+:PROPERTIES:
+:CUSTOM_ID: usage
+:END:
+
+** Basic ERT Test Workflow
+:PROPERTIES:
+:CUSTOM_ID: usage-basic-ert
+:END:
+
+#+begin_src yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: silex/emacs:${{ matrix.emacs_version }}-ci
+    strategy:
+      matrix:
+        emacs_version: ["29.4", "30.2"]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run Tests
+        uses: tychoish/action-elisp-test@main
+        with:
+          dependencies: "compat transient"
+          test-files: "test/test-*.el"
+#+end_src
+
+** Linting & Byte-Compilation
+:PROPERTIES:
+:CUSTOM_ID: usage-linting
+:END:
+
+#+begin_src yaml
+      - name: Lint Package
+        uses: tychoish/action-elisp-test/lint@main
+        with:
+          dependencies: "compat transient"
+          target-files: "*.el"
+#+end_src
+
+** Test Coverage with under-cover
+:PROPERTIES:
+:CUSTOM_ID: usage-coverage
+:END:
+
+#+begin_src yaml
+      - name: Test Coverage
+        uses: tychoish/action-elisp-test/coverage@main
+        with:
+          source-files: "my-pkg.el"
+          test-files: "test/test-*.el"
+          output-file: "coverage.json"
+#+end_src
+
+* Configuration Reference
+:PROPERTIES:
+:CUSTOM_ID: configuration-reference
+:END:
+
+| Action Input          | Default                      | Description                                                  |
+|-----------------------+------------------------------+--------------------------------------------------------------|
+| =dependencies=        | =""=                         | Space or newline-separated list of ELPA packages to install. |
+| =test-files=          | ="test/test-*.el"=           | Glob pattern for ERT test files.                            |
+| =load-paths=          | ="."=                        | Directories to prepend to =load-path=.                       |
+| =archives=            | ="gnu nongnu melpa elpaish"= | Package archives to enable.                                  |
+| =unsigned-archives=   | ="elpaish"=                  | Package archives allowed without GPG signatures.             |
+| =runner=              | ="ert"=                      | Test runner engine (=ert= or =elpaish=).                     |
+
+* License
+:PROPERTIES:
+:CUSTOM_ID: license
+:END:
+
+GPL-3.0-or-later

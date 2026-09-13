@@ -1,0 +1,54 @@
+name: "Emacs Lisp Coverage Runner"
+description: "Run ERT test suite with under-cover code coverage analysis."
+author: "sam kleinman <sam@tychoish.com>"
+
+inputs:
+  dependencies:
+    description: "Whitespace or comma-separated list of ELPA packages to install."
+    required: false
+    default: ""
+  test-files:
+    description: "Glob or whitespace-separated list of ERT test files to run."
+    required: false
+    default: "test/test-*.el"
+  source-files:
+    description: "Glob pattern of source files to instrument for coverage."
+    required: false
+    default: "*.el"
+  load-paths:
+    description: "Whitespace-separated list of directories to add to load-path."
+    required: false
+    default: "."
+  report-format:
+    description: "Coverage format (simplecov, lcov, text)."
+    required: false
+    default: "simplecov"
+  output-file:
+    description: "Path to write coverage report output."
+    required: false
+    default: "coverage.json"
+  archives:
+    description: "Package archives to enable."
+    required: false
+    default: "gnu nongnu melpa elpaish"
+  unsigned-archives:
+    description: "Package archives allowed without GPG signatures."
+    required: false
+    default: "elpaish"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Emacs Lisp Coverage
+      shell: bash
+      env:
+        INPUT_DEPENDENCIES: ${{ inputs.dependencies }}
+        INPUT_TEST_FILES: ${{ inputs.test-files }}
+        INPUT_SOURCE_FILES: ${{ inputs.source-files }}
+        INPUT_LOAD_PATHS: ${{ inputs.load-paths }}
+        INPUT_REPORT_FORMAT: ${{ inputs.report-format }}
+        INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
+        INPUT_ARCHIVES: ${{ inputs.archives }}
+        INPUT_UNSIGNED_ARCHIVES: ${{ inputs.unsigned-archives }}
+      run: |
+        emacs --batch -l "${{ github.action_path }}/../scripts/run-coverage.el"
