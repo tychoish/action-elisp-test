@@ -24,15 +24,33 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Run Test Suite Action
+      - name: Run Test Suite Action (YAML List Inputs)
         uses: ./
         with:
-          load-paths: "test/fixtures"
-          test-files: "test/test-*.el"
+          load-paths: |
+            - test/fixtures
+            - scripts
+          test-files: |
+            - test/test-action-scripts.el
+            - test/test-fixture-pkg.el
 
-      - name: Run Linting Action
+      - name: Run Linting Action (Configured Linters)
         uses: ./lint
         with:
-          target-files: "scripts/*.el test/fixtures/*.el"
-          byte-compile: "true"
-          checkdoc: "true"
+          target-files: |
+            - scripts/*.el
+            - test/fixtures/*.el
+          linters: |
+            - byte-compile
+            - checkdoc
+          required-linters: "byte-compile checkdoc"
+          fail-on-warning: "true"
+
+      - name: Run Coverage Action
+        uses: ./coverage
+        with:
+          source-files: "test/fixtures/fixture-pkg.el"
+          test-files: "test/test-fixture-pkg.el"
+          load-paths: "test/fixtures"
+          report-format: "text"
+          output-file: "coverage.txt"

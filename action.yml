@@ -1,28 +1,32 @@
 name: "Emacs Lisp Test Runner"
-description: "Run ERT or ELPAish test suites with automatic archive and dependency bootstrapping."
+description: "Run ERT or ELPAish test suites with automatic archive, keyring, and dependency bootstrapping."
 author: "sam kleinman <sam@tychoish.com>"
 
 inputs:
   dependencies:
-    description: "Whitespace or comma-separated list of ELPA packages to install."
+    description: "ELPA packages to install (YAML list, newline, or space-delimited)."
     required: false
     default: ""
   test-files:
-    description: "Glob or whitespace-separated list of ERT test files to run."
+    description: "ERT test files or globs (YAML list, newline, or space-delimited)."
     required: false
     default: "test/test-*.el"
   load-paths:
-    description: "Whitespace-separated list of directories to add to load-path."
+    description: "Directories to prepend to load-path (YAML list, newline, or space-delimited)."
     required: false
     default: "."
   archives:
-    description: "Package archives to enable (gnu, nongnu, melpa, elpaish)."
+    description: "Package archives to enable: gnu, nongnu, melpa, elpaish (YAML list or string)."
     required: false
     default: "gnu nongnu melpa elpaish"
   unsigned-archives:
-    description: "Package archives allowed without GPG signatures."
+    description: "Package archives allowed without GPG signatures (YAML list or string)."
     required: false
     default: "elpaish"
+  keyring-url:
+    description: "URL to fetch GPG keyring for archive signature verification."
+    required: false
+    default: "https://tychoish.github.io/elpaish/elpaish-keyring.gpg"
   runner:
     description: "Test runner strategy (ert or elpaish)."
     required: false
@@ -39,6 +43,7 @@ runs:
         INPUT_LOAD_PATHS: ${{ inputs.load-paths }}
         INPUT_ARCHIVES: ${{ inputs.archives }}
         INPUT_UNSIGNED_ARCHIVES: ${{ inputs.unsigned-archives }}
+        INPUT_KEYRING_URL: ${{ inputs.keyring-url }}
         INPUT_RUNNER: ${{ inputs.runner }}
       run: |
         SCRIPT_PATH="${{ github.action_path }}/scripts/run-ert.el"
