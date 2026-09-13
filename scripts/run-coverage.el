@@ -4,9 +4,10 @@
 (require 'seq)
 (require 'subr-x)
 
-(defvar under-cover-report-format)
-(defvar under-cover-report-file)
-(declare-function under-cover "under-cover")
+(defvar undercover-report-format)
+(defvar undercover-report-file)
+(declare-function undercover "undercover")
+(declare-function undercover-safe "undercover")
 
 ;; Load bootstrap logic
 (let ((bootstrap-file (expand-file-name "bootstrap.el" (file-name-directory (or load-file-name buffer-file-name)))))
@@ -31,7 +32,7 @@
         (append-to-file (point-min) (point-max) summary-file)))))
 
 (defun elisp-ci--setup-and-run-coverage ()
-  "Setup under-cover, load test files, and output coverage report."
+  "Setup undercover, load test files, and output coverage report."
   (let* ((output-file (or (getenv "INPUT_OUTPUT_FILE") "coverage.json"))
          (source-pat (or (getenv "INPUT_SOURCE_FILES") "*.el"))
          (format-opt (or (getenv "INPUT_REPORT_FORMAT") "simplecov"))
@@ -43,16 +44,16 @@
       (setq source-files (append source-files (file-expand-wildcards sp t))))
     (setq source-files (delete-dups source-files))
 
-    ;; Install under-cover
-    (elisp-ci--install-dependencies '(under-cover))
-    (require 'under-cover)
-    (setq under-cover-report-format (intern format-opt))
-    (setq under-cover-report-file (expand-file-name output-file))
+    ;; Install undercover from MELPA
+    (elisp-ci--install-dependencies '(undercover))
+    (require 'undercover)
+    (setq undercover-report-format (intern format-opt))
+    (setq undercover-report-file (expand-file-name output-file))
 
     ;; Instrument source files
     (message "Instrumenting %d source file(s) for coverage: %S" (length source-files) source-files)
     (dolist (sf source-files)
-      (under-cover sf))
+      (undercover sf))
 
     ;; Load test files and execute ERT suite
     (message "Loading test files: %S" test-files)
