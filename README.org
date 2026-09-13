@@ -4,18 +4,34 @@
 #+LANGUAGE: en
 #+OPTIONS: toc:2 num:nil author:nil email:nil
 
-A streamlined suite of composite GitHub Actions to execute ERT test suites, configurable linters, and code coverage analysis for Emacs Lisp packages with zero configuration boilerplate.
+A streamlined suite of composite GitHub Actions to execute ERT test suites,
+configurable linters, and code coverage analysis for Emacs Lisp packages with
+zero configuration boilerplate.
 
 * Overview
 :PROPERTIES:
 :CUSTOM_ID: overview
 :END:
 
-=elisp-ci= eliminates repetitive shell boilerplate from Emacs package CI workflows by encapsulating:
-- **Automatic GPG Keyring & Archive Setup**: Preconfigures GNU ELPA, NonGNU ELPA, MELPA, and ELPAish snapshot archives. Automatically fetches and imports the ELPAish GPG public keyring for cryptographic signature validation, with seamless unsigned archive fallback.
-- **Universal Input Parsing**: All list inputs accept either YAML structures/lists (bullet items or flow sequences) or lists of strings (whitespace, comma, tab, or newline-delimited).
-- **Configurable Quality Linters**: Byte-compilation (with warnings-as-errors), =checkdoc= docstring linting, =package-lint=, and =relint= with granular required/advisory failure gates.
-- **Coverage Reporting & UI Summary**: Measures code coverage with =under-cover= in SimpleCov, LCOV, Coveralls, or text formats, and renders summary tables directly to GitHub Actions Job Summaries (=$GITHUB_STEP_SUMMARY=).
+=elisp-ci= eliminates repetitive shell boilerplate from Emacs package CI
+workflows by encapsulating:
+
+- *Automatic GPG Keyring & Archive Setup*: Preconfigures GNU ELPA, NonGNU ELPA,
+  MELPA, and ELPAish snapshot archives. Automatically fetches and imports the
+  ELPAish GPG public keyring for cryptographic signature validation, with
+  seamless unsigned archive fallback.
+
+- *Universal Input Parsing*: All list inputs accept either YAML structures/lists
+  (bullet items or flow sequences) or lists of strings (whitespace, comma, tab,
+  or newline-delimited).
+
+- *Configurable Quality Linters*: Byte-compilation (with warnings-as-errors),
+  =checkdoc= docstring linting, =package-lint=, and =relint= with granular
+  required/advisory failure gates.
+
+- *Coverage Reporting & UI Summary*: Measures code coverage with =under-cover=
+  in SimpleCov, LCOV, Coveralls, or text formats, and renders summary tables
+  directly to GitHub Actions Job Summaries (=$GITHUB_STEP_SUMMARY=).
 
 * Actions
 :PROPERTIES:
@@ -168,7 +184,9 @@ Enabling extended linters via YAML structures:
 :CUSTOM_ID: coverage
 :END:
 
-Instruments source files using =under-cover=, executes test suites, exports coverage artifacts, and outputs a formatted markdown summary into =$GITHUB_STEP_SUMMARY=.
+Instruments source files using =under-cover=, executes test suites, exports
+coverage artifacts, and outputs a formatted markdown summary into
+=$GITHUB_STEP_SUMMARY=.
 
 *Action reference*: =tychoish/elisp-ci/coverage@main=
 
@@ -241,14 +259,25 @@ Coverage workflow uploading LCOV tracefile to Codecov:
 
 The =lint= sub-action supports four integrated analyzers:
 
-1. **=byte-compile=**: Runs Emacs batch byte-compilation. When =fail-on-warning: true= is set, compiler warnings (unresolved variables, obsolete functions, missing requires) fail the build.
-2. **=checkdoc=**: Validates standard Emacs Lisp docstring style (sentence casing, capitalization of parameter names, header comments).
-3. **=package-lint=**: Validates compliance with ELPA/MELPA packaging standards (automatically installed if enabled).
-4. **=relint=**: Scans regular expressions for syntax errors and inefficiencies (automatically installed if enabled).
+1. *=byte-compile=*: Runs Emacs batch byte-compilation. When =fail-on-warning:
+   true= is set, compiler warnings (unresolved variables, obsolete functions,
+   missing requires) fail the build.
+
+2. *=checkdoc=*: Validates standard Emacs Lisp docstring style (sentence casing,
+   capitalization of parameter names, header comments).
+
+3. *=package-lint=*: Validates compliance with ELPA/MELPA packaging standards
+   (automatically installed if enabled).
+
+4. *=relint=*: Scans regular expressions for syntax errors and inefficiencies
+   (automatically installed if enabled).
 
 *Gating Modes*:
-- **=linters=**: Determines which linters are executed.
-- **=required-linters=**: Determines which linters produce fatal, build-breaking failures vs advisory output.
+
+- *=linters=*: Determines which linters are executed.
+
+- *=required-linters=*: Determines which linters produce fatal, build-breaking
+  failures vs advisory output.
 
 * Coverage Formats & Reporting
 :PROPERTIES:
@@ -264,8 +293,10 @@ When measuring coverage with =under-cover= via =tychoish/elisp-ci/coverage=, the
 | =coveralls=  | =coveralls.json=     | Coveralls API payload format.                                                 |
 | =text=       | =coverage.txt=       | Human-readable plain text summary.                                            |
 
-*Automatic GitHub Actions Summary*:
-In addition to the exported artifact file, the coverage runner automatically appends a markdown summary table to =$GITHUB_STEP_SUMMARY=, rendering coverage status directly in the GitHub Actions run overview.
+*Automatic GitHub Actions Summary*: In addition to the exported artifact file,
+the coverage runner automatically appends a markdown summary table to
+=$GITHUB_STEP_SUMMARY=, rendering coverage status directly in the GitHub Actions
+run overview.
 
 * Example Workflow
 :PROPERTIES:
