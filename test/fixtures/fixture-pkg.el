@@ -6,7 +6,7 @@
 ;; Package-Requires: ((emacs "29.1"))
 
 ;;; Commentary:
-;; Test fixture package for action-elisp-test.
+;; Test fixture package for elisp-ci.
 
 ;;; Code:
 

@@ -7,38 +7,52 @@
 
 (defun elisp-ci--parse-list (input)
   "Parse INPUT into a list of cleaned string tokens.
-Supports:
-- Space, tab, newline, or comma-separated items.
-- YAML list bullets (- or *).
-- JSON/YAML arrays [a, b].
-- Single or double quoted tokens."
-  (when (and input (stringp input))
-    (let* ((cleaned (string-trim input))
-           ;; Strip surrounding brackets if array syntax [a, b]
-           (unbracketed (if (and (string-prefix-p "[" cleaned)
-                                 (string-suffix-p "]" cleaned))
-                            (substring cleaned 1 -1)
-                          cleaned))
-           (raw-lines (split-string unbracketed "[\n\r]+" t))
-           (results nil))
-      (dolist (line raw-lines)
-        (let ((item (string-trim line)))
-          ;; Strip leading YAML bullet: '- ' or '* '
-          (when (string-match "\\`[-*]\\s-+\\(.*\\)\\'" item)
-            (setq item (string-trim (match-string 1 item))))
-          ;; Strip single leading dash without space e.g. "-item"
-          (when (and (string-prefix-p "-" item) (> (length item) 1) (not (string-prefix-p "--" item)))
-            (setq item (string-trim (substring item 1))))
-          ;; Split comma, space, or tab separated tokens on this line
-          (dolist (tok (split-string item "[, \t]+" t))
-            (let ((sub (string-trim tok)))
-              ;; Strip surrounding single or double quotes from individual token
-              (when (or (and (string-prefix-p "\"" sub) (string-suffix-p "\"" sub) (> (length sub) 1))
-                        (and (string-prefix-p "'" sub) (string-suffix-p "'" sub) (> (length sub) 1)))
-                (setq sub (substring sub 1 -1)))
-              (unless (string-empty-p sub)
-                (push sub results))))))
-      (nreverse (delete-dups results)))))
+INPUT can be:
+- A list or sequence of strings, symbols, or sub-elements.
+- A string in YAML structure format (bullets `- item` or `* item`, `[a, b]`).
+- A string with newline, comma, tab, or space delimiters.
+- Nil (returns nil)."
+  (cond
+   ((null input) nil)
+   ((and (sequencep input) (not (stringp input)))
+    (let ((results nil))
+      (seq-doseq (elem input)
+        (dolist (item (elisp-ci--parse-list elem))
+          (push item results)))
+      (nreverse (delete-dups results))))
+   ((stringp input)
+    (let* ((cleaned (string-trim input)))
+      (if (string-empty-p cleaned)
+          nil
+        (let* ((unbracketed (if (and (string-prefix-p "[" cleaned)
+                                     (string-suffix-p "]" cleaned))
+                                (substring cleaned 1 -1)
+                              cleaned))
+               (raw-lines (split-string unbracketed "[\n\r]+" t))
+               (results nil))
+          (dolist (line raw-lines)
+            (let* ((line-no-comment (replace-regexp-in-string "#.*$" "" line))
+                   (item (string-trim line-no-comment)))
+              ;; Strip leading YAML bullet: '- ' or '* '
+              (when (string-match "\\`[-*]\\s-+\\(.*\\)\\'" item)
+                (setq item (string-trim (match-string 1 item))))
+              ;; Strip single leading dash without space e.g. "-item"
+              (when (and (string-prefix-p "-" item) (> (length item) 1) (not (string-prefix-p "--" item)))
+                (setq item (string-trim (substring item 1))))
+              ;; Split comma, space, or tab separated tokens on this line
+              (dolist (tok (split-string item "[, \t]+" t))
+                (let ((sub (string-trim tok)))
+                  ;; Strip surrounding single or double quotes from individual token
+                  (when (or (and (string-prefix-p "\"" sub) (string-suffix-p "\"" sub) (> (length sub) 1))
+                            (and (string-prefix-p "'" sub) (string-suffix-p "'" sub) (> (length sub) 1)))
+                    (setq sub (substring sub 1 -1)))
+                  (unless (string-empty-p sub)
+                    (push sub results))))))
+          (nreverse (delete-dups results))))))
+   ((symbolp input)
+    (list (symbol-name input)))
+   (t
+    (list (format "%s" input)))))
 
 (defun elisp-ci--import-elpaish-keyring ()
   "Fetch and import ELPAish GPG public keyring for archive verification."
@@ -94,7 +108,7 @@ Supports:
   "Install required dependencies from INPUT_DEPENDENCIES and EXTRA-DEPS."
   (package-initialize)
   (let* ((env-deps (elisp-ci--parse-list (getenv "INPUT_DEPENDENCIES")))
-         (all-dep-strs (append env-deps (mapcar (lambda (d) (if (symbolp d) (symbol-name d) d)) extra-deps)))
+         (all-dep-strs (append env-deps (elisp-ci--parse-list extra-deps)))
          (dep-syms (delete-dups (mapcar #'intern all-dep-strs))))
     (when dep-syms
       (unless package-archive-contents

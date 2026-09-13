@@ -4,19 +4,19 @@ author: "sam kleinman <sam@tychoish.com>"
 
 inputs:
   dependencies:
-    description: "ELPA packages to install (YAML list, newline, or space-delimited)."
+    description: "ELPA packages to install (YAML list or list of strings)."
     required: false
     default: ""
-  test-files:
-    description: "ERT test files or globs (YAML list, newline, or space-delimited)."
-    required: false
-    default: "test/test-*.el"
   source-files:
-    description: "Source files or globs to instrument for coverage (YAML list or string)."
+    description: "Source files or globs to instrument for coverage (YAML list or list of strings)."
     required: false
     default: "*.el"
+  test-files:
+    description: "ERT test files or globs (YAML list or list of strings)."
+    required: false
+    default: "test/test-*.el"
   load-paths:
-    description: "Directories to prepend to load-path (YAML list, newline, or space-delimited)."
+    description: "Directories to prepend to load-path (YAML list or list of strings)."
     required: false
     default: "."
   report-format:
@@ -28,11 +28,11 @@ inputs:
     required: false
     default: "coverage.json"
   archives:
-    description: "Package archives to enable."
+    description: "Package archives to enable (YAML list or list of strings)."
     required: false
     default: "gnu nongnu melpa elpaish"
   unsigned-archives:
-    description: "Package archives allowed without GPG signatures."
+    description: "Package archives allowed without GPG signatures (YAML list or list of strings)."
     required: false
     default: "elpaish"
   keyring-url:
