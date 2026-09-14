@@ -80,7 +80,8 @@ INPUT can be:
     (delete-dups (nreverse deps))))
 
 (defun elisp-ci--get-dependencies (&optional extra-deps)
-  "Get all required dependencies from inputs, env vars, Package-Requires headers, and EXTRA-DEPS."
+  "Get all required dependencies.
+Resolved from inputs, env vars, Package-Requires headers, and EXTRA-DEPS."
   (let* ((input-dep (getenv "INPUT_DEPENDENCIES"))
          (env-dep (or (getenv "ELISP_CI_DEPENDENCIES")
                       (getenv "ELISP_DEPENDENCIES")
@@ -121,7 +122,7 @@ INPUT can be:
               (error-message-string err)))))
 
 (defun elisp-ci--configure-archives ()
-  "Configure `package-archives` and `package-unsigned-archives` from environment."
+  "Configure package archives and unsigned archives from environment."
   (let* ((archive-env (or (getenv "INPUT_ARCHIVES")
                           (getenv "ELISP_CI_ARCHIVES")
                           (getenv "ELISP_ARCHIVES")))
@@ -163,7 +164,8 @@ INPUT can be:
           (message "Added to load-path: %s" exp))))))
 
 (defun elisp-ci--install-dependencies (&optional extra-deps)
-  "Install required dependencies from inputs, env vars, Package-Requires, and EXTRA-DEPS."
+  "Install required dependencies.
+Resolved from inputs, env vars, Package-Requires, and EXTRA-DEPS."
   (package-initialize)
   (let* ((dep-strs (elisp-ci--get-dependencies extra-deps))
          (dep-syms (delete-dups (mapcar #'intern dep-strs))))

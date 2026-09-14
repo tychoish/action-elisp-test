@@ -37,9 +37,6 @@
   (should (equal (elisp-ci--parse-list '["compat" "transient"]) '("compat" "transient")))
   (should (equal (elisp-ci--parse-list '("- compat" "- transient")) '("compat" "transient"))))
 
-(provide 'test-action-scripts)
-;;; test-action-scripts.el ends here
-
 (ert-deftest action-scripts/discover-package-requires ()
   "Test automatic discovery of dependencies from Package-Requires header."
   (let ((deps (elisp-ci--discover-package-requires)))
@@ -51,3 +48,6 @@
   "Test overriding dependencies via ELISP_CI_DEPENDENCIES environment variable."
   (let ((process-environment (cons "ELISP_CI_DEPENDENCIES=transient llama" process-environment)))
     (should (equal (elisp-ci--get-dependencies) '("transient" "llama")))))
+
+(provide 'test-action-scripts)
+;;; test-action-scripts.el ends here
