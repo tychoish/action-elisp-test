@@ -5,6 +5,10 @@
 (require 'subr-x)
 (require 'url)
 
+(defconst elisp-ci--builtin-packages
+  '("emacs" "cl-lib" "subr-x" "seq" "pcase" "bytecomp" "ert" "syntax" "faces")
+  "Built-in Emacs packages that do not need external ELPA installation.")
+
 (defun elisp-ci--parse-list (input)
   "Parse INPUT into a list of cleaned string tokens.
 INPUT can be:
@@ -54,10 +58,56 @@ INPUT can be:
    (t
     (list (format "%s" input)))))
 
+(defun elisp-ci--discover-package-requires ()
+  "Extract dependencies from Package-Requires headers in source .el files."
+  (let ((el-files (file-expand-wildcards "*.el" t))
+        (deps nil))
+    (dolist (f el-files)
+      (with-temp-buffer
+        (insert-file-contents f)
+        (goto-char (point-min))
+        (when (re-search-forward "^;;;?\\s-*Package-Requires:\\s-*" nil t)
+          (let* ((start (point))
+                 (end (line-end-position))
+                 (header-str (buffer-substring-no-properties start end))
+                 (parsed (condition-case nil
+                             (read header-str)
+                           (error nil))))
+            (dolist (item parsed)
+              (let ((name (if (listp item) (symbol-name (car item)) (symbol-name item))))
+                (unless (member name elisp-ci--builtin-packages)
+                  (push name deps))))))))
+    (delete-dups (nreverse deps))))
+
+(defun elisp-ci--get-dependencies (&optional extra-deps)
+  "Get all required dependencies from inputs, env vars, Package-Requires headers, and EXTRA-DEPS."
+  (let* ((input-dep (getenv "INPUT_DEPENDENCIES"))
+         (env-dep (or (getenv "ELISP_CI_DEPENDENCIES")
+                      (getenv "ELISP_DEPENDENCIES")
+                      (getenv "DEPENDENCIES")))
+         (raw (cond
+               ((and input-dep (not (string-empty-p (string-trim input-dep))))
+                input-dep)
+               ((and env-dep (not (string-empty-p (string-trim env-dep))))
+                env-dep)
+               (t nil)))
+         (specified (when raw (elisp-ci--parse-list raw)))
+         (discovered (unless specified (elisp-ci--discover-package-requires)))
+         (extra (when extra-deps (elisp-ci--parse-list extra-deps)))
+         (all (append (or specified discovered) extra)))
+    (when all
+      (message "Resolved package dependencies: %S (source: %s)"
+               all
+               (cond (specified "configured via input/env")
+                     (discovered "auto-discovered from Package-Requires")
+                     (t "extra-deps"))))
+    all))
+
 (defun elisp-ci--import-elpaish-keyring ()
   "Fetch and import ELPAish GPG public keyring for archive verification."
   (condition-case err
       (let* ((keyring-url (or (getenv "INPUT_KEYRING_URL")
+                              (getenv "ELISP_CI_KEYRING_URL")
                               "https://tychoish.github.io/elpaish/elpaish-keyring.gpg"))
              (temp-file (make-temp-file "elpaish-keyring" nil ".gpg")))
         (message "Fetching ELPAish GPG keyring from %s..." keyring-url)
@@ -72,9 +122,14 @@ INPUT can be:
 
 (defun elisp-ci--configure-archives ()
   "Configure `package-archives` and `package-unsigned-archives` from environment."
-  (let* ((archive-names (or (elisp-ci--parse-list (getenv "INPUT_ARCHIVES"))
+  (let* ((archive-env (or (getenv "INPUT_ARCHIVES")
+                          (getenv "ELISP_CI_ARCHIVES")
+                          (getenv "ELISP_ARCHIVES")))
+         (archive-names (or (and archive-env (elisp-ci--parse-list archive-env))
                             '("gnu" "nongnu" "melpa" "elpaish")))
-         (unsigned-names (or (elisp-ci--parse-list (getenv "INPUT_UNSIGNED_ARCHIVES"))
+         (unsigned-env (or (getenv "INPUT_UNSIGNED_ARCHIVES")
+                           (getenv "ELISP_CI_UNSIGNED_ARCHIVES")))
+         (unsigned-names (or (and unsigned-env (elisp-ci--parse-list unsigned-env))
                              '("elpaish")))
          (standard-map '(("gnu" . "https://elpa.gnu.org/packages/")
                          ("nongnu" . "https://elpa.nongnu.org/nongnu/")
@@ -96,8 +151,11 @@ INPUT can be:
 
 (defun elisp-ci--setup-load-paths ()
   "Add directories in INPUT_LOAD_PATHS to `load-path`."
-  (let ((paths (or (elisp-ci--parse-list (getenv "INPUT_LOAD_PATHS"))
-                   '("."))))
+  (let* ((paths-env (or (getenv "INPUT_LOAD_PATHS")
+                        (getenv "ELISP_CI_LOAD_PATHS")
+                        (getenv "ELISP_LOAD_PATHS")))
+         (paths (or (and paths-env (elisp-ci--parse-list paths-env))
+                    '("."))))
     (dolist (p paths)
       (let ((exp (expand-file-name p)))
         (when (file-directory-p exp)
@@ -105,11 +163,10 @@ INPUT can be:
           (message "Added to load-path: %s" exp))))))
 
 (defun elisp-ci--install-dependencies (&optional extra-deps)
-  "Install required dependencies from INPUT_DEPENDENCIES and EXTRA-DEPS."
+  "Install required dependencies from inputs, env vars, Package-Requires, and EXTRA-DEPS."
   (package-initialize)
-  (let* ((env-deps (elisp-ci--parse-list (getenv "INPUT_DEPENDENCIES")))
-         (all-dep-strs (append env-deps (elisp-ci--parse-list extra-deps)))
-         (dep-syms (delete-dups (mapcar #'intern all-dep-strs))))
+  (let* ((dep-strs (elisp-ci--get-dependencies extra-deps))
+         (dep-syms (delete-dups (mapcar #'intern dep-strs))))
     (when dep-syms
       (unless package-archive-contents
         (message "Refreshing package archive contents...")
@@ -121,7 +178,10 @@ INPUT can be:
 
 (defun elisp-ci--find-test-files (&optional pattern-override)
   "Find test files matching pattern in INPUT_TEST_FILES or PATTERN-OVERRIDE."
-  (let* ((pattern-input (or pattern-override (getenv "INPUT_TEST_FILES") "test/test-*.el"))
+  (let* ((pattern-input (or pattern-override
+                            (getenv "INPUT_TEST_FILES")
+                            (getenv "ELISP_CI_TEST_FILES")
+                            "test/test-*.el"))
          (patterns (elisp-ci--parse-list pattern-input))
          (matched nil))
     (dolist (pat patterns)

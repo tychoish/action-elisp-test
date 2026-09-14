@@ -39,3 +39,15 @@
 
 (provide 'test-action-scripts)
 ;;; test-action-scripts.el ends here
+
+(ert-deftest action-scripts/discover-package-requires ()
+  "Test automatic discovery of dependencies from Package-Requires header."
+  (let ((deps (elisp-ci--discover-package-requires)))
+    ;; In this repository, fixture-pkg.el or others might have headers
+    (message "Discovered root deps: %S" deps)
+    (should (listp deps))))
+
+(ert-deftest action-scripts/get-dependencies-env-override ()
+  "Test overriding dependencies via ELISP_CI_DEPENDENCIES environment variable."
+  (let ((process-environment (cons "ELISP_CI_DEPENDENCIES=transient llama" process-environment)))
+    (should (equal (elisp-ci--get-dependencies) '("transient" "llama")))))

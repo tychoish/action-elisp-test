@@ -4,23 +4,23 @@ author: "sam kleinman <sam@tychoish.com>"
 
 inputs:
   dependencies:
-    description: "ELPA packages to install (YAML list or list of strings)."
+    description: "ELPA packages to install (space/comma-delimited string or multiline string)."
     required: false
     default: ""
   test-files:
-    description: "ERT test files or globs (YAML list or list of strings)."
+    description: "ERT test files or globs (space/comma-delimited string or multiline string)."
     required: false
     default: "test/test-*.el"
   load-paths:
-    description: "Directories to prepend to load-path (YAML list or list of strings)."
+    description: "Directories to prepend to load-path (space/comma-delimited string or multiline string)."
     required: false
     default: "."
   archives:
-    description: "Package archives to enable: gnu, nongnu, melpa, elpaish (YAML list or list of strings)."
+    description: "Package archives to enable: gnu, nongnu, melpa, elpaish (space/comma-delimited string)."
     required: false
     default: "gnu nongnu melpa elpaish"
   unsigned-archives:
-    description: "Package archives allowed without GPG signatures (YAML list or list of strings)."
+    description: "Package archives allowed without GPG signatures (space/comma-delimited string)."
     required: false
     default: "elpaish"
   keyring-url:

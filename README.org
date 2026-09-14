@@ -3,7 +3,6 @@
 #+EMAIL: sam@tychoish.com
 #+LANGUAGE: en
 #+OPTIONS: toc:2 num:nil author:nil email:nil
-
 A streamlined suite of composite GitHub Actions to execute ERT test suites,
 configurable linters, and code coverage analysis for Emacs Lisp packages with
 zero configuration boilerplate.
@@ -16,14 +15,20 @@ zero configuration boilerplate.
 =elisp-ci= eliminates repetitive shell boilerplate from Emacs package CI
 workflows by encapsulating:
 
+- *Automatic Dependency Discovery*: Automatically scans =Package-Requires=
+  headers across package =*.el= source files and installs required ELPA
+  dependencies before linting, testing, and coverage measurement. No manual
+  dependency lists required in standard setups.
+
+- *Single-Location Dependency & Option Configuration*: If extra dependencies or
+  custom paths are needed, they can be declared once at the workflow or job level
+  using environment variables (=ELISP_CI_DEPENDENCIES=, =ELISP_CI_LOAD_PATHS=,
+  =ELISP_CI_ARCHIVES=) instead of duplicating them across every step.
+
 - *Automatic GPG Keyring & Archive Setup*: Preconfigures GNU ELPA, NonGNU ELPA,
   MELPA, and ELPAish snapshot archives. Automatically fetches and imports the
   ELPAish GPG public keyring for cryptographic signature validation, with
   seamless unsigned archive fallback.
-
-- *Universal Input Parsing*: All list inputs accept either YAML structures/lists
-  (bullet items or flow sequences) or lists of strings (whitespace, comma, tab,
-  or newline-delimited).
 
 - *Configurable Quality Linters*: Byte-compilation (with warnings-as-errors),
   =checkdoc= docstring linting, =package-lint=, and =relint= with granular
@@ -32,6 +37,37 @@ workflows by encapsulating:
 - *Coverage Reporting & UI Summary*: Measures code coverage with =under-cover=
   in SimpleCov, LCOV, Coveralls, or text formats, and renders summary tables
   directly to GitHub Actions Job Summaries (=$GITHUB_STEP_SUMMARY=).
+
+* Specifying Dependencies
+:PROPERTIES:
+:CUSTOM_ID: specifying-dependencies
+:END:
+
+=elisp-ci= supports three dependency resolution strategies (in order of priority):
+
+1. *Step-Level Input* (=with: dependencies: "..."=): Overrides dependencies for
+   a specific step. Accepts space/comma-delimited strings or YAML block scalars.
+2. *Workflow or Job-Level Environment Variable* (=env: ELISP_CI_DEPENDENCIES: "..."=):
+   Declares dependencies *once* for the entire workflow or job without repeating
+   them across lint, test, and coverage steps.
+3. *Automatic Header Extraction (Default, Zero-Config)*: If no explicit dependencies
+   are given, =elisp-ci= automatically inspects =;; Package-Requires:= in all
+   =*.el= files, filters out Emacs built-ins, and installs required packages.
+
+#+begin_src yaml
+# Example: Setting dependencies once at the job level
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: silex/emacs:${{ matrix.emacs_version }}-ci
+    env:
+      ELISP_CI_DEPENDENCIES: "compat transient"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: tychoish/elisp-ci/lint@main
+      - uses: tychoish/elisp-ci@main
+      - uses: tychoish/elisp-ci/coverage@main
+#+end_src
 
 * Actions
 :PROPERTIES:
@@ -51,60 +87,21 @@ Runs ERT or ELPAish test suites with automatic archive, keyring, and dependency 
 
 | Input                 | Default                                                     | Description                                                  |
 |-----------------------+-------------------------------------------------------------+--------------------------------------------------------------|
-| =dependencies=        | =""=                                                        | ELPA package dependencies (YAML list or list of strings).    |
-| =test-files=          | ="test/test-*.el"=                                          | Test files or globs to load and execute (YAML list or string).|
-| =load-paths=          | ="."=                                                       | Directories to prepend to =load-path= (YAML list or string). |
-| =archives=            | ="gnu nongnu melpa elpaish"=                                | Enabled package archives (YAML list or list of strings).     |
-| =unsigned-archives=   | ="elpaish"=                                                 | Fallback unsigned archive whitelist (YAML list or string).   |
+| =dependencies=        | =""= (auto-discovered)                                      | ELPA packages (or set via =ELISP_CI_DEPENDENCIES=).          |
+| =test-files=          | ="test/test-*.el"=                                          | Test files or globs to load and execute (delimited string).   |
+| =load-paths=          | ="."=                                                       | Directories to prepend to =load-path= (delimited string).     |
+| =archives=            | ="gnu nongnu melpa elpaish"=                                | Enabled package archives (space-delimited string).           |
+| =unsigned-archives=   | ="elpaish"=                                                 | Fallback unsigned archive whitelist (space-delimited string).|
 | =keyring-url=         | ="https://tychoish.github.io/elpaish/elpaish-keyring.gpg"=   | Remote GPG keyring for ELPAish signature verification.        |
 | =runner=              | ="ert"=                                                     | Test runner engine (=ert= or =elpaish=).                     |
 
 *** Basic Configuration
 
-Run test suites using default settings:
+Run test suites using zero-configuration auto-discovery:
 
 #+begin_src yaml
 - name: Run Tests
   uses: tychoish/elisp-ci@main
-#+end_src
-
-*** Full Configuration (All Defaults Specified)
-
-All options explicitly configured with their default values:
-
-#+begin_src yaml
-- name: Run Tests (All Defaults Specified)
-  uses: tychoish/elisp-ci@main
-  with:
-    dependencies: ""
-    test-files: "test/test-*.el"
-    load-paths: "."
-    archives: "gnu nongnu melpa elpaish"
-    unsigned-archives: "elpaish"
-    keyring-url: "https://tychoish.github.io/elpaish/elpaish-keyring.gpg"
-    runner: "ert"
-#+end_src
-
-List inputs can also be passed as YAML lists / structures:
-
-#+begin_src yaml
-- name: Run Tests (YAML List Configuration)
-  uses: tychoish/elisp-ci@main
-  with:
-    dependencies:
-      - compat
-      - transient
-    load-paths:
-      - .
-      - lisp
-    test-files:
-      - test/test-*.el
-      - test/integration/test-*.el
-    archives:
-      - gnu
-      - nongnu
-      - melpa
-      - elpaish
 #+end_src
 
 ** Linter
@@ -120,63 +117,21 @@ Runs byte-compilation, =checkdoc=, =package-lint=, and =relint= across source fi
 
 | Input                 | Default                                                     | Description                                                  |
 |-----------------------+-------------------------------------------------------------+--------------------------------------------------------------|
-| =dependencies=        | =""=                                                        | Dependencies to install prior to linting (YAML list/string). |
-| =target-files=        | ="*.el"=                                                    | Source files or globs to analyze (YAML list or string).      |
-| =load-paths=          | ="."=                                                       | Directories to prepend to =load-path= (YAML list or string). |
-| =linters=             | ="byte-compile checkdoc"=                                   | Active linters (YAML list or list of strings).               |
-| =required-linters=    | ="byte-compile checkdoc"=                                   | Linters that block build on failure (YAML list or string).   |
+| =dependencies=        | =""= (auto-discovered)                                      | Dependencies (or set via =ELISP_CI_DEPENDENCIES=).           |
+| =target-files=        | ="*.el"=                                                    | Source files or globs to analyze (delimited string).          |
+| =load-paths=          | ="."=                                                       | Directories to prepend to =load-path= (delimited string).     |
+| =linters=             | ="byte-compile checkdoc"=                                   | Active linters (space-delimited string).                      |
+| =required-linters=    | ="byte-compile checkdoc"=                                   | Linters that block build on failure (space-delimited string).|
 | =fail-on-warning=     | ="true"=                                                    | Treat byte-compiler warnings as fatal errors.                |
-| =archives=            | ="gnu nongnu melpa elpaish"=                                | Enabled package archives (YAML list or list of strings).     |
-| =unsigned-archives=   | ="elpaish"=                                                 | Fallback unsigned archive whitelist (YAML list or string).   |
+| =archives=            | ="gnu nongnu melpa elpaish"=                                | Enabled package archives (space-delimited string).           |
+| =unsigned-archives=   | ="elpaish"=                                                 | Fallback unsigned archive whitelist (space-delimited string).|
 | =keyring-url=         | ="https://tychoish.github.io/elpaish/elpaish-keyring.gpg"=   | Remote GPG keyring URL.                                      |
 
 *** Basic Configuration
 
-Run default linters (=byte-compile= and =checkdoc=):
-
 #+begin_src yaml
 - name: Lint Source Files
   uses: tychoish/elisp-ci/lint@main
-#+end_src
-
-*** Full Configuration (All Defaults Specified)
-
-All options explicitly configured with their default values:
-
-#+begin_src yaml
-- name: Lint Source Files (All Defaults Specified)
-  uses: tychoish/elisp-ci/lint@main
-  with:
-    dependencies: ""
-    target-files: "*.el"
-    load-paths: "."
-    linters: "byte-compile checkdoc"
-    required-linters: "byte-compile checkdoc"
-    fail-on-warning: "true"
-    archives: "gnu nongnu melpa elpaish"
-    unsigned-archives: "elpaish"
-    keyring-url: "https://tychoish.github.io/elpaish/elpaish-keyring.gpg"
-#+end_src
-
-Enabling extended linters via YAML structures:
-
-#+begin_src yaml
-- name: Lint Source Files (Extended Linters)
-  uses: tychoish/elisp-ci/lint@main
-  with:
-    dependencies:
-      - compat
-      - transient
-    target-files: "*.el"
-    linters:
-      - byte-compile
-      - checkdoc
-      - package-lint
-      - relint
-    required-linters:
-      - byte-compile
-      - checkdoc
-    fail-on-warning: "true"
 #+end_src
 
 ** Code Coverage
@@ -194,62 +149,31 @@ coverage artifacts, and outputs a formatted markdown summary into
 
 | Input                 | Default                                                     | Description                                                  |
 |-----------------------+-------------------------------------------------------------+--------------------------------------------------------------|
-| =dependencies=        | =""=                                                        | Dependencies to install prior to test run (YAML list/string).|
-| =source-files=        | ="*.el"=                                                    | Source files to instrument for coverage (YAML list/string).  |
-| =test-files=          | ="test/test-*.el"=                                          | ERT test files or globs to run (YAML list or string).        |
-| =load-paths=          | ="."=                                                       | Directories to prepend to =load-path= (YAML list or string). |
+| =dependencies=        | =""= (auto-discovered)                                      | Dependencies (or set via =ELISP_CI_DEPENDENCIES=).           |
+| =source-files=        | ="*.el"=                                                    | Source files to instrument for coverage (delimited string).  |
+| =test-files=          | ="test/test-*.el"=                                          | ERT test files or globs to run (delimited string).           |
+| =load-paths=          | ="."=                                                       | Directories to prepend to =load-path= (delimited string).     |
 | =report-format=       | ="simplecov"=                                               | Format: =simplecov=, =lcov=, =coveralls=, or =text=.         |
 | =output-file=         | ="coverage.json"=                                           | Target file path for generated coverage data.                |
-| =archives=            | ="gnu nongnu melpa elpaish"=                                | Enabled package archives (YAML list or list of strings).     |
-| =unsigned-archives=   | ="elpaish"=                                                 | Fallback unsigned archive whitelist (YAML list or string).   |
+| =archives=            | ="gnu nongnu melpa elpaish"=                                | Enabled package archives (space-delimited string).           |
+| =unsigned-archives=   | ="elpaish"=                                                 | Fallback unsigned archive whitelist (space-delimited string).|
 | =keyring-url=         | ="https://tychoish.github.io/elpaish/elpaish-keyring.gpg"=   | Remote GPG keyring URL.                                      |
 
-*** Basic Configuration
-
-Instrument default files and export SimpleCov report:
-
-#+begin_src yaml
-- name: Measure Test Coverage
-  uses: tychoish/elisp-ci/coverage@main
-#+end_src
-
-*** Full Configuration (All Defaults Specified)
-
-All options explicitly configured with their default values:
-
-#+begin_src yaml
-- name: Measure Test Coverage (All Defaults Specified)
-  uses: tychoish/elisp-ci/coverage@main
-  with:
-    dependencies: ""
-    source-files: "*.el"
-    test-files: "test/test-*.el"
-    load-paths: "."
-    report-format: "simplecov"
-    output-file: "coverage.json"
-    archives: "gnu nongnu melpa elpaish"
-    unsigned-archives: "elpaish"
-    keyring-url: "https://tychoish.github.io/elpaish/elpaish-keyring.gpg"
-#+end_src
-
-Coverage workflow uploading LCOV tracefile to Codecov:
+*** Codecov Integration Workflow
 
 #+begin_src yaml
 - name: Measure Test Coverage (LCOV)
   uses: tychoish/elisp-ci/coverage@main
   with:
-    source-files:
-      - "my-package.el"
-      - "lisp/*.el"
-    test-files:
-      - "test/test-*.el"
     report-format: "lcov"
     output-file: "coverage/lcov.info"
 
 - name: Upload Coverage to Codecov
-  uses: codecov/codecov-action@v4
+  uses: codecov/codecov-action@v5
+  if: ${{ !cancelled() }}
   with:
     files: coverage/lcov.info
+    fail_ci_if_error: false
 #+end_src
 
 * Supported Linters & Quality Gates
@@ -272,38 +196,12 @@ The =lint= sub-action supports four integrated analyzers:
 4. =relint=: Scans regular expressions for syntax errors and inefficiencies
    (automatically installed if enabled).
 
-*Gating Modes*:
-
-- =linters=: Determines which linters are executed.
-
-- =required-linters=: Determines which linters produce fatal, build-breaking
-  failures vs advisory output.
-
-* Coverage Formats & Reporting
-:PROPERTIES:
-:CUSTOM_ID: coverage-reporting-options
-:END:
-
-When measuring coverage with =under-cover= via =tychoish/elisp-ci/coverage=, the following =report-format= options are supported:
-
-| Format       | Output File Defaults | Use Case & Tooling Compatibility                                              |
-|--------------+----------------------+-------------------------------------------------------------------------------|
-| =simplecov=  | =coverage.json=      | JSON format compatible with SimpleCov, Code Climate, Codacy, and SonarQube.  |
-| =lcov=       | =lcov.info=          | Standard LCOV tracefile for =codecov/codecov-action= and IDE coverage gutters.|
-| =coveralls=  | =coveralls.json=     | Coveralls API payload format.                                                 |
-| =text=       | =coverage.txt=       | Human-readable plain text summary.                                            |
-
-*Automatic GitHub Actions Summary*: In addition to the exported artifact file,
-the coverage runner automatically appends a markdown summary table to
-=$GITHUB_STEP_SUMMARY=, rendering coverage status directly in the GitHub Actions
-run overview.
-
 * Example Workflow
 :PROPERTIES:
 :CUSTOM_ID: example-workflow
 :END:
 
-A complete CI matrix workflow running linting, ERT tests, and code coverage:
+A complete, zero-boilerplate CI matrix workflow with linting, ERT tests, code coverage, and Codecov upload:
 
 #+begin_src yaml
 name: CI
@@ -313,13 +211,22 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
     container: silex/emacs:${{ matrix.emacs_version }}-ci
+    timeout-minutes: 5
     strategy:
+      fail-fast: false
       matrix:
-        emacs_version: ["29.4", "30.2"]
+        emacs_version:
+          - "29.4"
+          - "30.2"
+
     steps:
       - uses: actions/checkout@v5
 
@@ -330,11 +237,17 @@ jobs:
         uses: tychoish/elisp-ci@main
 
       - name: Measure Code Coverage
-        if: matrix.emacs_version == '30.2'
         uses: tychoish/elisp-ci/coverage@main
         with:
           report-format: "lcov"
           output-file: "coverage/lcov.info"
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: ${{ !cancelled() }}
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
 #+end_src
 
 * License

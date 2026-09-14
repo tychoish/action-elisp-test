@@ -55,6 +55,11 @@
     (dolist (sf source-files)
       (undercover sf))
 
+    ;; Hook markdown summary table to kill-emacs-hook
+    (add-hook 'kill-emacs-hook
+              (lambda ()
+                (elisp-ci--render-step-summary source-files output-file format-opt)))
+
     ;; Load test files and execute ERT suite
     (message "Loading test files: %S" test-files)
     (dolist (tf test-files)
@@ -64,9 +69,7 @@
     (condition-case err
         (ert-run-tests-batch-and-exit)
       (error
-       (message "Tests execution finished with: %S" err)))
-
-    (elisp-ci--render-step-summary source-files output-file format-opt)))
+       (message "Tests execution finished with: %S" err)))))
 
 (elisp-ci--setup-and-run-coverage)
 
